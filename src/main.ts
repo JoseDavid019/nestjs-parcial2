@@ -7,11 +7,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const config = new DocumentBuilder()
+    .addBearerAuth()
     .setTitle('My API Documentation')
     .setDescription('The API description')
     .setVersion('1.0')
-    .addTag('')
-    .addTag('')
+    .addTag('users')
+    .addTag('auth')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('documentation', app, documentFactory);
