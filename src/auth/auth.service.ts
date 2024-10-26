@@ -13,23 +13,33 @@ export class AuthService {
   ) { }
 
   async register(userObject: RegisterAuthDto) {
-    const { Password } = userObject;
+    const { Email, Password } = userObject;
+    const existingUser = await this.usersService.findByEmail(Email);
+    if (existingUser) {
+      throw new HttpException('Email is already in use', 400);
+    }
     const plainToHash = await hash(Password, 10);
-    userObject = { ...userObject, Password: plainToHash };
-    return this.usersService.create(userObject);
+    return this.usersService.create({ ...userObject, Password: plainToHash });
   }
   async login(userObject: LoginAuthDto) {
     const { Email, Password } = userObject;
-    const findUser = await this.usersService.findByEmail(Email);
-    if (!findUser) throw new HttpException('User not found', 404);
-    const checkPassword = await compare(Password, findUser.Password);
-    if (!checkPassword) throw new HttpException('Password incorrect', 403);
-    const payload = {UserId: findUser.UserId, FirstName: findUser.FirstName, LastName: findUser.LastName};
-    const token = this.jwtService.sign(payload);
-    const data = {
-      user: findUser,
-      token,
+    const user = await this.usersService.findByEmail(Email);
+    if (!user) {
+      throw new HttpException('User not found', 404);
     }
-    return data;
+    const isPasswordValid = await compare(Password, user.Password);
+    if (!isPasswordValid) {
+      throw new HttpException('Password incorrect', 403);
+    }
+    const payload = { UserId: user.UserId, FirstName: user.FirstName, LastName: user.LastName };
+    const token = this.jwtService.sign(payload);
+    return {
+      user: {
+        UserId: user.UserId,
+        FirstName: user.FirstName,
+        LastName: user.LastName,
+      },
+      token,
+    };
   }
 }
